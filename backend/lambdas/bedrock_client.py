@@ -411,16 +411,18 @@ Example: ["product_1", "product_3", "product_5"]
         user_prompt = (
             f"User Query: {user_query}\nUser Preferences: {user_preferences}\n\n"
             f"Products:\n{products_text}\n\n"
-            "For each product, return a short HTML paragraph (1-3 sentences) that: 1) states the main matching features (color, style, pattern),"
-            " 2) explains why those features match the uploaded image and preferences, and 3) notes value or price-fit (e.g., 'great budget pick' or 'premium option')."
-            " Output must be a single JSON object mapping product IDs to the explanations. Example output: {\"product_1\": \"<p><strong>Why it fits:</strong> ...</p>\", \"product_2\": \"<p>...</p>\"}"
+            "For each product, return an HTML-safe explanation that is at least 8-10 sentences and may include multiple short paragraphs. "
+            "Each explanation should: (a) open with a concise matching summary (1 sentence), (b) describe 2–3 specific matching features (color, style, pattern, silhouette, material), "
+            "(c) explain why those features match the uploaded image and the user's preferences, and (d) close with a brief note on price/value or occasion suitability. "
+            "Use simple HTML tags for structure (e.g., <p>, <strong>, <em>, <ul>/<li> sparingly). Output must be a single JSON object mapping product IDs to the explanations. "
+            "Example output: {\"product_1\": \"<p><strong>Why it fits:</strong> ...</p><p>More details...</p>\", \"product_2\": \"<p>...</p>\"}"
         )
 
         # Use a reasonable max tokens for batch explanations
         try:
-            max_tokens = int(os.environ.get("EXPLANATION_MAX_TOKENS", "800"))
+            max_tokens = int(os.environ.get("EXPLANATION_MAX_TOKENS", "1600"))
         except ValueError:
-            max_tokens = 800
+            max_tokens = 1600
 
         request_body = {
             "messages": [
