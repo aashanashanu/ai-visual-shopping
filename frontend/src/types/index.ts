@@ -10,6 +10,7 @@ export interface Product {
   brand?: string;
   image_url: string;
   score?: number;
+  explanation?: string;
 }
 
 export interface SearchRequest {
@@ -25,7 +26,6 @@ export interface SearchRequest {
 
 export interface SearchResponse {
   products: Product[];
-  explanation: string;
   query: string;
   preferences: string;
   total_results: number;
