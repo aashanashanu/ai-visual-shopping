@@ -371,3 +371,132 @@ Example: ["product_1", "product_3", "product_5"]
             print(f"Error filtering products: {str(e)}")
             # Return original products if filtering fails
             return products
+
+    def generate_explanations_batch(
+        self,
+        user_query: str,
+        products: List[Dict[str, Any]],
+        user_preferences: str = ""
+    ) -> Dict[str, str]:
+        """
+        Generate individual explanations for each product in a single Bedrock call.
+        Returns a mapping of product_id -> explanation text.
+        Falls back to returning a default explanation for each product on failure.
+        """
+        if not products or not isinstance(products, list):
+            return {}
+
+        if len(products) > 20:
+            products = products[:20]
+
+        # Ensure products have ids
+        valid_products = [p for p in products if isinstance(p, dict) and p.get('product_id')]
+        if not valid_products:
+            return {}
+
+        # Build product section for prompt
+        products_text = "\n".join([
+            f"ID: {p.get('product_id')}, Title: {p.get('title', p.get('name', 'Unknown'))}, Price: ${p.get('price', 0)}, Color: {p.get('color', 'N/A')}, Description: {p.get('description', 'N/A')[:120]}"
+            for p in valid_products
+        ])
+
+        system_prompt = (
+            "You are a product explanation assistant. Given a user image query and preferences, "
+            "produce a short HTML-safe explanation for each product explaining why it matches. "
+            "Return the response strictly as a JSON object mapping product IDs to explanation strings. "
+            "Example: {\"product_1\": \"Explanation for product 1\", \"product_2\": \"Explanation for product 2\"}"
+        )
+
+        user_prompt = f"User Query: {user_query}\nUser Preferences: {user_preferences}\n\nProducts:\n{products_text}\n\nReturn a JSON object mapping product IDs to short explanations (1-3 sentences each)."
+
+        # Use a reasonable max tokens for batch explanations
+        try:
+            max_tokens = int(os.environ.get("EXPLANATION_MAX_TOKENS", "800"))
+        except ValueError:
+            max_tokens = 800
+
+        request_body = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"text": f"{system_prompt}\n\n{user_prompt}"}]
+                }
+            ],
+            "inferenceConfig": {
+                "maxTokens": max_tokens,
+                "temperature": 0.6,
+                "topP": 0.9
+            }
+        }
+
+        try:
+            response = self.client.invoke_model(
+                modelId="us.amazon.nova-2-lite-v1:0",
+                body=json.dumps(request_body),
+                contentType="application/json",
+                accept="application/json"
+            )
+
+            response_body = json.loads(response['body'].read())
+
+            # Extract text robustly
+            full_text = ''
+            try:
+                content_parts = response_body['output']['message']['content']
+                texts = []
+                for part in content_parts:
+                    if isinstance(part, dict) and 'text' in part:
+                        texts.append(part['text'])
+                    elif isinstance(part, str):
+                        texts.append(part)
+                full_text = "\n".join(texts).strip()
+            except Exception:
+                try:
+                    full_text = response_body.get('output', {}).get('message', {}).get('content', [])[0].get('text', '')
+                except Exception:
+                    full_text = ''
+
+            if not full_text:
+                print("Empty model response for batch explanations")
+                return {p['product_id']: "Found similar product based on your image search." for p in valid_products}
+
+            # Try to parse JSON object from response
+            explanations = None
+            try:
+                parsed = json.loads(full_text)
+                if isinstance(parsed, dict):
+                    explanations = {k: str(v) for k, v in parsed.items()}
+            except Exception:
+                # Try to extract JSON object substring
+                import re
+                m = re.search(r'(\{[\s\S]*\})', full_text)
+                if m:
+                    try:
+                        parsed = json.loads(m.group(1))
+                        if isinstance(parsed, dict):
+                            explanations = {k: str(v) for k, v in parsed.items()}
+                    except Exception:
+                        explanations = None
+
+            # Fallback: attempt to split by product headings if model returned concatenated text
+            if not explanations:
+                explanations = {}
+                for p in valid_products:
+                    pid = p['product_id']
+                    # naive search for product id surrounding text
+                    idx = full_text.find(pid)
+                    if idx != -1:
+                        # take a nearby slice
+                        start = max(0, idx - 40)
+                        end = min(len(full_text), idx + 300)
+                        snippet = full_text[start:end]
+                        explanations[pid] = snippet.strip()
+                # If still empty, assign generic explanation per product
+                if not explanations:
+                    explanations = {p['product_id']: "Found similar product based on your image search." for p in valid_products}
+
+            return explanations
+
+        except Exception as e:
+            print(f"Error generating batch explanations: {str(e)}")
+            return {p['product_id']: "Found similar product based on your image search." for p in valid_products}

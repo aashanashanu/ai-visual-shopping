@@ -174,20 +174,21 @@ def lambda_handler(event, context):
         # Limit to requested size
         similar_products = similar_products[:size]
         
-        # Generate AI explanations inlined per product (one explanation per product)
+        # Generate AI explanations inlined per product using a single batch call
         if similar_products:
-            logger.info("Generating AI explanations for each product")
-            for idx, product in enumerate(similar_products):
-                try:
-                    single_expl = bedrock_client.generate_explanation(
-                        user_query=user_query,
-                        products=[product],
-                        user_preferences=preferences
-                    )
-                    # Attach explanation to product object
-                    product['explanation'] = single_expl
-                except Exception as e:
-                    logger.warning(f"Failed to generate explanation for product {product.get('product_id', idx)}: {str(e)}")
+            logger.info("Generating AI explanations for products (single batch call)")
+            try:
+                explanations_map = bedrock_client.generate_explanations_batch(
+                    user_query=user_query,
+                    products=similar_products,
+                    user_preferences=preferences
+                )
+                for idx, product in enumerate(similar_products):
+                    pid = product.get('product_id') or str(idx)
+                    product['explanation'] = explanations_map.get(pid, "Found similar product based on your image search.")
+            except Exception as e:
+                logger.warning(f"Failed to generate batch explanations: {str(e)}")
+                for idx, product in enumerate(similar_products):
                     product['explanation'] = "Found similar product based on your image search."
 
         response = {
