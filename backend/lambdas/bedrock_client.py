@@ -401,13 +401,20 @@ Example: ["product_1", "product_3", "product_5"]
         ])
 
         system_prompt = (
-            "You are a product explanation assistant. Given a user image query and preferences, "
-            "produce a short HTML-safe explanation for each product explaining why it matches. "
-            "Return the response strictly as a JSON object mapping product IDs to explanation strings. "
-            "Example: {\"product_1\": \"Explanation for product 1\", \"product_2\": \"Explanation for product 2\"}"
+            "You are a warm, expert shopping assistant. For each product, write a concise, persuasive, and personalized explanation (2-4 sentences)"
+            " describing why the product is a good match for the user's uploaded image and stated preferences."
+            " Focus on observable attributes (style, color, pattern, silhouette, material), the likely occasion or fit, and the product's price/value."
+            " Return the response strictly as a JSON object that maps product IDs to HTML-safe explanation strings (use simple tags like <strong>, <em>, <ul>, <li> sparingly)."
+            " Do not include any extra narration, numbered lists of unrelated items, or keys other than the product IDs."
         )
 
-        user_prompt = f"User Query: {user_query}\nUser Preferences: {user_preferences}\n\nProducts:\n{products_text}\n\nReturn a JSON object mapping product IDs to short explanations (1-3 sentences each)."
+        user_prompt = (
+            f"User Query: {user_query}\nUser Preferences: {user_preferences}\n\n"
+            f"Products:\n{products_text}\n\n"
+            "For each product, return a short HTML paragraph (1-3 sentences) that: 1) states the main matching features (color, style, pattern),"
+            " 2) explains why those features match the uploaded image and preferences, and 3) notes value or price-fit (e.g., 'great budget pick' or 'premium option')."
+            " Output must be a single JSON object mapping product IDs to the explanations. Example output: {\"product_1\": \"<p><strong>Why it fits:</strong> ...</p>\", \"product_2\": \"<p>...</p>\"}"
+        )
 
         # Use a reasonable max tokens for batch explanations
         try:
