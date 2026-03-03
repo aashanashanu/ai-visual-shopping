@@ -111,28 +111,42 @@ ai-visual-shopping/
 - **Embeddings**: `amazon.nova-2-multimodal-embeddings-v1:0`
 - **Text Generation**: `amazon.nova-2-lite-v1:0`
 
-## � API Endpoints
+## API Endpoints
 
-### Search Products
-```bash
-POST /search
-Content-Type: application/json
+Below are the primary REST endpoints exposed by the API Gateway. Responses are JSON.
+
 ### POST /search
-Search for visually similar products.
+Search for visually similar products. The request should include a base64 image and optional query/preferences/filters.
 
-**Request:**
+Example curl request:
+```bash
+curl -X POST https://{api_base}/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
+    "query": "similar summer dress",
+    "preferences": "blue, casual, under $100",
+    "max_price": 100,
+    "min_price": 10,
+    "size": 5
+  }'
+```
+
+Request body (JSON):
 ```json
 {
-  "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
-  "query": "Show me similar products",
-  "preferences": "Show me similar in blue under $100",
+  "image": "data:image/jpeg;base64,...",
+  "query": "optional text query",
+  "preferences": "natural language preferences",
   "max_price": 100,
-  "min_price": 50,
+  "min_price": 10,
+  "color": "blue",
+  "category": "dresses",
   "size": 5
 }
 ```
 
-**Response:**
+Response (successful):
 ```json
 {
   "products": [
@@ -144,24 +158,38 @@ Search for visually similar products.
       "category": "dresses",
       "color": "blue",
       "style": "casual",
-      "image_url": "s3://bucket/images/dress_002.jpg",
-      "score": 0.95
+      "image_url": "https://.../images/dress_002.jpg",
+      "score": 0.95,
+      "explanation": "Matches your uploaded style because the silhouette, color and fabric..."
     }
   ],
-  "explanation": "This blue summer sundress matches your uploaded style because...",
   "total_results": 5
 }
 ```
 
-### POST /explain
-Generate AI explanations for products.
+Notes:
+- Each returned product may include an `explanation` field with a short AI-generated rationale for that product.
+- The top-level `explanation` field is no longer used; explanations are per-product.
 
-**Request:**
+### POST /explain
+Generate or refresh AI explanations for a list of products (server-side; useful for batch workflows).
+
+Request body:
 ```json
 {
-  "query": "Show me similar products",
-  "products": [...],
+  "query": "optional contextual query",
+  "products": [ { "product_id": "...", "title": "...", "image_url": "..." } ],
   "preferences": "I prefer blue items under $100"
+}
+```
+
+Response:
+```json
+{
+  "products": [
+    { "product_id": "dress_002", "explanation": "..." },
+    { "product_id": "shoe_004", "explanation": "..." }
+  ]
 }
 ```
 
