@@ -48,12 +48,12 @@
 │  │           Amazon Bedrock                                         │   │
 │  │                                                                  │   │
 │  │  ┌────────────────────────────┐  ┌─────────────────────────────┐ │   │
-│  │  │ Amazon Nova Multimodal     │  │ Claude 3 (Haiku)            │ │   │
+│  │  │ Amazon Nova Multimodal     │  │ Amazon Nova Lite v2         │ │   │
 │  │  │ Embeddings                 │  │                             │ │   │
 │  │  │                            │  │ • Explanations              │ │   │
 │  │  │ • 1024-dim embeddings      │  │ • Product matching logic    │ │   │
 │  │  │ • Image similarity         │  │ • Preference filtering      │ │   │
-│  │  │ • Visual search            │  │ • Natural language          │ │   │
+│  │  │ • Visual search            │  │ • Natural language         │ │   │
 │  │  └────────────────────────────┘  └─────────────────────────────┘ │   │
 │  └──────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
