@@ -94,7 +94,7 @@ confirm_deletion() {
     warning "This will permanently delete ALL AWS resources created by the AI Visual Shopping application."
     warning "This includes:"
     warning "  - S3 buckets and all data"
-    warning "  - OpenSearch domain and all indices"
+    warning "  - Vector storage (S3-backed)"
     warning "  - Lambda functions"
     warning "  - API Gateway"
     warning "  - IAM roles and policies"
@@ -135,12 +135,6 @@ get_stack_outputs() {
         --query 'Stacks[0].Outputs[?OutputKey==`UserUploadsBucketName`].OutputValue' \
         --output text 2>/dev/null || echo "")
     
-    OPENSEARCH_DOMAIN=$(aws cloudformation describe-stacks \
-        --stack-name $STACK_NAME \
-        --region $REGION \
-        --query 'Stacks[0].Outputs[?OutputKey==`OpenSearchDomainEndpoint`].OutputValue' \
-        --output text 2>/dev/null || echo "")
-    
     API_GATEWAY=$(aws cloudformation describe-stacks \
         --stack-name $STACK_NAME \
         --region $REGION \
@@ -165,12 +159,12 @@ empty_s3_buckets() {
             aws s3api delete-objects --bucket $PRODUCT_IMAGES_BUCKET \
                 --delete "$(aws s3api list-object-versions --bucket $PRODUCT_IMAGES_BUCKET \
                 --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' \
-                --output json 2>/dev/null | jq -c '. || {}')" 2>/dev/null || true
+                --output json 2>/dev/null)" 2>/dev/null || true
             # Delete delete markers
             aws s3api delete-objects --bucket $PRODUCT_IMAGES_BUCKET \
                 --delete "$(aws s3api list-object-versions --bucket $PRODUCT_IMAGES_BUCKET \
                 --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' \
-                --output json 2>/dev/null | jq -c '. || {}')" 2>/dev/null || true
+                --output json 2>/dev/null)" 2>/dev/null || true
             log "Product images bucket emptied."
         else
             info "Product images bucket not found or already empty."
@@ -185,11 +179,11 @@ empty_s3_buckets() {
             aws s3api delete-objects --bucket $USER_UPLOADS_BUCKET \
                 --delete "$(aws s3api list-object-versions --bucket $USER_UPLOADS_BUCKET \
                 --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' \
-                --output json 2>/dev/null | jq -c '. || {}')" 2>/dev/null || true
+                --output json 2>/dev/null)" 2>/dev/null || true
             aws s3api delete-objects --bucket $USER_UPLOADS_BUCKET \
                 --delete "$(aws s3api list-object-versions --bucket $USER_UPLOADS_BUCKET \
                 --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' \
-                --output json 2>/dev/null | jq -c '. || {}')" 2>/dev/null || true
+                --output json 2>/dev/null)" 2>/dev/null || true
             log "User uploads bucket emptied."
         else
             info "User uploads bucket not found or already empty."
@@ -261,12 +255,18 @@ verify_cleanup() {
     log "Verifying cleanup..."
     
     # Check if stack still exists
-    if aws cloudformation describe-stacks \
+    STACK_STATUS=$(aws cloudformation describe-stacks \
         --stack-name $STACK_NAME \
-        --region $REGION &> /dev/null; then
-        error "Stack $STACK_NAME still exists. Cleanup may have failed."
+        --region $REGION \
+        --query 'Stacks[0].StackStatus' \
+        --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+    
+    if [ "$STACK_STATUS" != "DOES_NOT_EXIST" ] && [ "$STACK_STATUS" != "DELETE_COMPLETE" ]; then
+        error "Stack $STACK_NAME still exists with status: $STACK_STATUS. Cleanup may have failed."
         return 1
     fi
+    
+    log "Stack deletion verified."
     
     # Check for remaining resources
     REMAINING_RESOURCES=""
@@ -278,6 +278,12 @@ verify_cleanup() {
     
     if [ -n "$USER_UPLOADS_BUCKET" ] && aws s3 ls "s3://$USER_UPLOADS_BUCKET" --region $REGION &> /dev/null; then
         REMAINING_RESOURCES="$REMAINING_RESOURCES S3:$USER_UPLOADS_BUCKET"
+    fi
+    
+    # Check frontend bucket
+    FRONTEND_BUCKET="${STACK_NAME}-frontend-${ENVIRONMENT}"
+    if aws s3 ls "s3://$FRONTEND_BUCKET" --region $REGION &> /dev/null; then
+        REMAINING_RESOURCES="$REMAINING_RESOURCES S3:$FRONTEND_BUCKET"
     fi
     
     if [ -n "$REMAINING_RESOURCES" ]; then

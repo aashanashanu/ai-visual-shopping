@@ -16,12 +16,13 @@ def lambda_handler(event, context):
         # Parse request body
         body = json.loads(event.get('body', '{}'))
         
-        # Extract parameters
+        # Extract and validate parameters
         user_query = body.get('query', '')
         products = body.get('products', [])
         user_preferences = body.get('preferences', '')
         
-        if not products:
+        # Validate products list
+        if not products or not isinstance(products, list):
             return {
                 'statusCode': 400,
                 'headers': {
@@ -29,12 +30,18 @@ def lambda_handler(event, context):
                     'Access-Control-Allow-Origin': '*'
                 },
                 'body': json.dumps({
-                    'error': 'Products are required for explanation generation'
+                    'error': 'Products must be provided as a non-empty list'
                 })
             }
         
-        # Initialize Bedrock client
-        bedrock_client = BedrockClient(region=os.environ.get('REGION', 'us-east-1'))
+        # Limit products to reasonable number
+        if len(products) > 20:
+            products = products[:20]
+            logger.warning(f"Limited products to first 20 items from {len(body.get('products', []))}")
+        
+        # Initialize Bedrock client with environment validation
+        region = os.environ.get('REGION', 'us-east-1')
+        bedrock_client = BedrockClient(region=region)
         
         # Generate AI explanation
         logger.info("Generating AI explanation for products")
@@ -64,6 +71,7 @@ def lambda_handler(event, context):
         
     except Exception as e:
         logger.error(f"Error generating explanation: {str(e)}")
+        # Don't expose internal error details to client
         return {
             'statusCode': 500,
             'headers': {
@@ -71,7 +79,6 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps({
-                'error': 'Internal server error',
-                'message': str(e)
+                'error': 'An internal error occurred while generating explanation. Please try again later.'
             })
         }

@@ -6,6 +6,8 @@ export interface Product {
   category: string;
   color: string;
   style: string;
+  material?: string;
+  brand?: string;
   image_url: string;
   score?: number;
 }

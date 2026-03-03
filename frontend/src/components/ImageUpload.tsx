@@ -36,6 +36,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleFileSelect = (file: File) => {
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    const VALID_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    
+    if (!VALID_TYPES.includes(file.type)) {
+      alert('Please upload JPEG, PNG, or WebP images only.');
+      return;
+    }
+    
+    if (file.size > MAX_SIZE) {
+      alert('File too large. Maximum size is 5MB.');
+      return;
+    }
+    
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {

@@ -36,7 +36,6 @@ htmlcov/
 .tox/
 .nox/
 .coverage
-.coverage.*
 .cache
 nosetests.xml
 coverage.xml
@@ -255,3 +254,47 @@ deploy/
 # Lambda
 package.json
 package-lock.json
+
+# Project specific - Temporary files
+*.zip
+deploy/
+sample_images/
+product_images/
+nova_processed_images/
+products/
+seed_response.json
+CLEANUP-SUMMARY.md
+SETUP-GUIDE.md
+AWS-CLEANUP-SUMMARY.md
+
+# Project specific - Test and debug files
+seed_*.json
+*_result*.json
+*_final*.json
+*_fixed*.json
+*_test*.json
+backend/seed_data*.zip
+backend/lambdas/seed_data_backup.py
+image_search.zip
+generate_explanation.zip
+
+# Frontend build
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Local environment and editor artifacts
+.venv/
+venv/
+
+# Ensure node modules and Mac metadata are ignored
+node_modules/
+frontend/node_modules/
+.DS_Store
+
+# Build outputs
+build/
+dist/
+

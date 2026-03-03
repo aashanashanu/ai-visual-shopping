@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AI Visual Shopping - Demo Optimized Configuration'
+Description: 'AI Visual Shopping - Demo Optimized with S3 Vector Storage'
 
 Parameters:
   Environment:
@@ -7,14 +7,9 @@ Parameters:
     Default: 'demo'
     AllowedValues: ['demo', 'dev']
     Description: Environment name
-  
-  OpenSearchDomainName:
-    Type: String
-    Default: 'ai-shopping-opensearch-demo'
-    Description: OpenSearch domain name
 
 Resources:
-  # S3 Bucket for product images - Free Tier eligible
+  # S3 Bucket for product images and vector storage - Free Tier eligible
   ProductImagesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -27,9 +22,16 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
-            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE']
             AllowedOrigins: ['*']
             MaxAge: 3600
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
 
   # S3 Bucket for user uploads - Free Tier eligible
   UserUploadsBucket:
@@ -44,40 +46,16 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
-            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE']
             AllowedOrigins: ['*']
             MaxAge: 3600
-
-  # OpenSearch Domain - Demo optimized
-  OpenSearchDomain:
-    Type: AWS::OpenSearchService::Domain
-    Properties:
-      DomainName: !Ref OpenSearchDomainName
-      EngineVersion: 'OpenSearch_2.5'
-      ClusterConfig:
-        InstanceCount: 1
-        InstanceType: 't3.small.search'  # Cost-optimized for demo
-        DedicatedMasterEnabled: false
-        WarmEnabled: false
-        ZoneAwarenessEnabled: false
-      EBSOptions:
-        EBSEnabled: true
-        VolumeSize: 20  # Demo-optimized storage
-        VolumeType: 'gp3'
-      AccessPolicies:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !GetAtt OpenSearchAccessRole.Arn
-            Action: 'es:*'
-            Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${OpenSearchDomainName}/*'
-      NodeToNodeEncryptionOptions:
-        Enabled: true
-      EncryptionAtRestOptions:
-        Enabled: true
-      DomainEndpointOptions:
-        EnforceHTTPS: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 7
 
   # IAM Role for Lambda functions
   LambdaExecutionRole:
@@ -102,7 +80,7 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
-                Resource: '*'
+                Resource: "*"
         - PolicyName: S3Access
           PolicyDocument:
             Version: '2012-10-17'
@@ -114,34 +92,11 @@ Resources:
                   - s3:DeleteObject
                   - s3:ListBucket
                 Resource:
-                  - !GetAtt ProductImagesBucket.Arn
-                  - !Sub '${ProductImagesBucket}/*'
-                  - !GetAtt UserUploadsBucket.Arn
-                  - !Sub '${UserUploadsBucket}/*'
-        - PolicyName: OpenSearchAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - es:ESHttpPost
-                  - es:ESHttpPut
-                  - es:ESHttpGet
-                  - es:ESHttpDelete
-                Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${OpenSearchDomainName}/*'
+                  - !Sub 'arn:aws:s3:::${ProductImagesBucket}'
+                  - !Sub 'arn:aws:s3:::${ProductImagesBucket}/*'
+                  - !Sub 'arn:aws:s3:::${UserUploadsBucket}'
+                  - !Sub 'arn:aws:s3:::${UserUploadsBucket}/*'
 
-  # IAM Role for OpenSearch access
-  OpenSearchAccessRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub 'ai-shopping-opensearch-role-${Environment}'
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: es.amazonaws.com
-            Action: sts:AssumeRole
 
   # Lambda function for image search - Demo optimized
   ImageSearchFunction:
@@ -151,12 +106,10 @@ Resources:
       Runtime: python3.11
       Handler: image_search.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 30  # Demo-optimized timeout
+      Timeout: 60  # Increased to allow for Bedrock retries
       MemorySize: 512  # Demo-optimized memory
       Environment:
         Variables:
-          OPENSEARCH_ENDPOINT: !GetAtt OpenSearchDomain.DomainEndpoint
-          OPENSEARCH_INDEX: products
           PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
           USER_UPLOADS_BUCKET: !Ref UserUploadsBucket
           REGION: !Ref AWS::Region
@@ -176,17 +129,41 @@ Resources:
       Runtime: python3.11
       Handler: generate_explanation.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 30  # Demo-optimized timeout
+      Timeout: 60  # Increased to allow for Bedrock retries
       MemorySize: 512  # Demo-optimized memory
       Environment:
         Variables:
           REGION: !Ref AWS::Region
+          EXPLANATION_MAX_TOKENS: "6000"
       Code:
         ZipFile: |
           def lambda_handler(event, context):
               return {
                   'statusCode': 200,
                   'body': 'Generate explanation function placeholder'
+              }
+
+  # Lambda function for seeding data - Demo optimized
+  SeedDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ai-visual-shopping-demo-seed-data-${Environment}'
+      Runtime: python3.11
+      Handler: seed_data.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300  # Extended timeout for data seeding
+      MemorySize: 1024  # Increased memory for seeding
+      Environment:
+        Variables:
+          PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
+          USER_UPLOADS_BUCKET: !Ref UserUploadsBucket
+          REGION: !Ref AWS::Region
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Seed data function placeholder'
               }
 
   # API Gateway - Free Tier eligible
@@ -236,12 +213,73 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateExplanationFunction.Arn}/invocations'
 
+  # CORS OPTIONS Methods
+  SearchOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref SearchResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Requested-With'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Max-Age: "'7200'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Max-Age: true
+
+  ExplainOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ExplainResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Requested-With'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Max-Age: "'7200'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Max-Age: true
+
   # API Gateway Deployment
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - SearchMethod
       - ExplainMethod
+      - SearchOptionsMethod
+      - ExplainOptionsMethod
+      - ImageSearchApiPermission
+      - GenerateExplanationApiPermission
     Properties:
       RestApiId: !Ref ApiGateway
 
@@ -283,17 +321,16 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-UserUploadsBucket'
 
-  OpenSearchDomainEndpoint:
-    Description: 'OpenSearch domain endpoint'
-    Value: !GetAtt OpenSearchDomain.DomainEndpoint
-    Export:
-      Name: !Sub '${AWS::StackName}-OpenSearchEndpoint'
-
   ApiGatewayUrl:
     Description: 'API Gateway URL'
     Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
     Export:
       Name: !Sub '${AWS::StackName}-ApiGatewayUrl'
+  LambdaExecutionRole:
+    Description: 'IAM Role ARN for Lambda functions'
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaExecutionRole'
 
   ImageSearchFunctionName:
     Description: 'Image search Lambda function name'
@@ -306,3 +343,7 @@ Outputs:
     Value: !Ref GenerateExplanationFunction
     Export:
       Name: !Sub '${AWS::StackName}-GenerateExplanationFunction'
+
+  CostOptimizationNote:
+    Description: 'Cost optimization achieved by removing OpenSearch cluster and using S3-backed vector storage'
+    Value: 'Estimated monthly cost: $5-15 (vs $540+ with OpenSearch)'

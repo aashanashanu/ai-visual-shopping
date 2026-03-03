@@ -1,13 +1,18 @@
 import axios from 'axios';
 import { SearchRequest, SearchResponse, ExplanationRequest, ExplanationResponse } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev';
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('REACT_APP_API_URL environment variable is required. Please configure the API URL in your .env file.');
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 60000, // 60 seconds to match Lambda timeout
 });
 
 export const searchProducts = async (request: SearchRequest): Promise<SearchResponse> => {

@@ -1,158 +1,122 @@
-# AI Visual Shopping - Multimodal Ecommerce powered by Amazon Nova
+# AI Visual Shopping - Multimodal Ecommerce with Amazon Nova
 
-A production-ready multimodal ecommerce application that combines image understanding, text intent understanding, semantic vector search, and generative explanations using Amazon Nova foundation models.
+An AI-powered visual shopping application that allows users to upload product images and receive personalized recommendations using Amazon's Nova multimodal models and S3-backed vector storage.
 
-## 🎯 Project Overview
+## 🎯 Features
 
-AI Visual Shopping allows users to:
-- Upload an image of a product (e.g., outfit screenshot)
-- Add text preferences (e.g., "Show me similar in blue under $100")
-- Get visually similar products from an ecommerce catalog
-- Receive AI-generated explanations of why products match
+- **🖼️ Visual Search**: Upload product images to find visually similar items
+- **🤖 AI-Powered**: Uses Amazon Nova models for embeddings and text generation
+- **💰 Cost-Optimized**: S3 vector storage instead of expensive OpenSearch clusters
+- **🔍 Smart Filtering**: Filter results by price, color, category, and style
+- **📝 AI Explanations**: Get personalized explanations for product recommendations
+- **🚀 Serverless**: Built with AWS Lambda and API Gateway for scalability
 
-## 🏗 Architecture
+## 🏗️ Architecture
 
-### AWS Services Used
-- **Amazon S3**: Store product and user-uploaded images
-- **AWS Lambda**: Backend logic for image processing and search
-- **Amazon API Gateway**: RESTful API endpoints
-- **Amazon OpenSearch**: Vector search index with k-NN
-- **Amazon Bedrock**: Invoke Nova foundation models
-- **IAM**: Secure access management
-- **CloudFormation**: Infrastructure as Code
+```
+User Upload Image → Lambda → Nova Embeddings → S3 Vector Store → k-NN Search → Similar Products → AI Explanation
+```
 
-### Nova Model Usage
-- **Nova Multimodal Embedding**: Generate 1024-dimensional embeddings for images
-- **Nova 2 Lite**: Generate conversational explanations and filter products
-- **NO Nova Act**: No agentic automation (as per requirements)
+### Key Components
+
+- **Frontend**: React application for image upload and results display
+- **Backend**: AWS Lambda functions for processing
+- **AI Models**: Amazon Nova multimodal embeddings and text generation
+- **Vector Storage**: S3-backed vector storage (cost-optimized)
+- **API**: Amazon API Gateway for REST endpoints
+- **Storage**: S3 buckets for images and vector data
+
+## 💡 Cost Optimization
+
+This project uses **S3-backed vector storage** instead of traditional OpenSearch clusters:
+
+| Component | Traditional | This Project | Monthly Savings |
+|-----------|------------|--------------|----------------|
+| Vector Database | OpenSearch ($540/month) | S3 Storage ($2/month) | **$538** |
+| Total Cost | ~$542/month | ~$15/month | **97% reduction** |
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+1. **AWS Account** with access to:
+   - AWS Lambda
+   - Amazon Bedrock
+   - Amazon S3
+   - Amazon API Gateway
+
+2. **Request Nova Model Access** in AWS Bedrock Console:
+   - `amazon.nova-2-multimodal-embeddings-v1:0`
+   - `amazon.nova-2-lite-v1:0`
+
+3. **Install AWS CLI** and configure credentials
+
+### Deployment
+
+#### Demo Deployment (Cost-Optimized)
+```bash
+./scripts/deploy.sh --demo
+```
+
+#### Production Deployment
+```bash
+./scripts/deploy.sh
+```
+
+### Test the Application
+
+1. **Deploy the infrastructure** (see above)
+2. **Test the API endpoints**:
+   ```bash
+   ./scripts/test_api.py
+   ```
+3. **Deploy the frontend** (optional):
+   ```bash
+   cd frontend && npm run build && aws s3 sync build/ s3://your-bucket-name
+   ```
 
 ## 📁 Project Structure
 
 ```
 ai-visual-shopping/
 ├── backend/
-│   ├── cloudformation.yaml          # Infrastructure template
-│   ├── sample_catalog.json          # 30+ sample products
-│   └── lambdas/
-│       ├── bedrock_client.py        # Nova model integration
-│       ├── opensearch_client.py    # Vector search operations
-│       ├── image_search.py          # Main search Lambda
-│       ├── generate_explanation.py  # Explanation Lambda
-│       ├── seed_data.py            # Data seeding Lambda
-│       └── requirements.txt        # Python dependencies
-├── frontend/
-│   ├── public/
-│   │   └── index.html
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ImageUpload.tsx     # Image upload component
-│   │   │   ├── ProductCard.tsx     # Product display component
-│   │   │   └── ChatInterface.tsx   # AI chat interface
-│   │   ├── services/
-│   │   │   └── api.ts              # API client
-│   │   ├── types/
-│   │   │   └── index.ts            # TypeScript types
-│   │   ├── App.tsx                 # Main React app
-│   │   ├── index.tsx               # React entry point
-│   │   └── index.css               # Tailwind CSS
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── tailwind.config.js
-├── scripts/
-│   ├── deploy.sh                    # Deployment automation
-│   └── test_api.py                 # API testing script
-└── README.md
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- AWS CLI installed and configured
-- Node.js 16+ (for frontend)
-- Python 3.11 (for backend)
-- AWS account with appropriate permissions
-
-### 1. Clone and Setup
-```bash
-git clone https://github.com/your-username/ai-visual-shopping.git
-cd ai-visual-shopping
-```
-
-### 2. Configure Bedrock model access for Nova models
-Ensure you have access to these Nova models in your AWS account:
-- `amazon.nova-multimodal-embedding-v1:0`
-- `amazon.nova-lite-v1:0`
-
-Request access through the AWS Console > Amazon Bedrock > Model Access.
-
-### 3. Deploy Infrastructure
-```bash
-# Make deployment script executable
-chmod +x scripts/deploy.sh
-
-# Deploy standard production
-./scripts/deploy.sh
-
-# Or deploy demo-optimized version
-./scripts/deploy.sh --demo
-```
-
-This will:
-- Deploy CloudFormation stack
-- Create S3 buckets, OpenSearch domain, Lambda functions, API Gateway
-- Package and deploy Lambda code
-- Seed OpenSearch with sample product data
-
-### 4. Clean Up Resources (When Needed)
-```bash
-# Make cleanup script executable
-chmod +x scripts/cleanup.sh
-
-# Clean up all resources (with confirmation)
-./scripts/cleanup.sh
-
-# Clean up demo environment
-./scripts/cleanup.sh --demo
-
-# Force delete without confirmation
-./scripts/cleanup.sh --force
-```
-
-### 5. Configure Frontend
-After deployment, the script creates `frontend/.env` with your API URL. Install dependencies:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-### 6. Test the Application
-```bash
-# Test API endpoints
-python scripts/test_api.py https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev
+│   ├── cloudformation.yaml          # Production infrastructure
+│   ├── cloudformation-demo.yaml     # Demo infrastructure
+│   └── lambdas/                      # Lambda functions
+│       ├── seed_data.py             # Data seeding
+│       ├── image_search.py          # Visual search
+│       ├── generate_explanation.py  # AI explanations
+│       ├── bedrock_client.py        # Nova model client
+│       └── s3_vector_store.py       # S3 vector storage
+├── frontend/                         # React application
+├── scripts/                         # Deployment and utility scripts
+│   ├── deploy.sh                    # Main deployment script
+│   ├── cleanup.sh                   # Resource cleanup
+│   └── test_api.py                  # API testing
+└── README.md                        # This file
 ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
-The Lambda functions use these environment variables (auto-configured by CloudFormation):
 
-- `OPENSEARCH_ENDPOINT`: OpenSearch domain endpoint
-- `OPENSEARCH_INDEX`: Index name (default: products)
-- `PRODUCT_IMAGES_BUCKET`: S3 bucket for product images
-- `USER_UPLOADS_BUCKET`: S3 bucket for user uploads
-- `REGION`: AWS region
+| Variable | Description | Example |
+|-----------|-------------|---------|
+| `PRODUCT_IMAGES_BUCKET` | S3 bucket for product images | `ai-shopping-catalog-demo` |
+| `USER_UPLOADS_BUCKET` | S3 bucket for user uploads | `ai-shopping-uploads-demo` |
+| `REGION` | AWS region | `us-east-1` |
 
-### Frontend Configuration
-Create `frontend/.env`:
-```
-REACT_APP_API_URL=https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev
-REACT_APP_REGION=us-east-1
-```
+### Nova Models
 
-## 📊 API Endpoints
+- **Embeddings**: `amazon.nova-2-multimodal-embeddings-v1:0`
+- **Text Generation**: `amazon.nova-2-lite-v1:0`
 
+## � API Endpoints
+
+### Search Products
+```bash
+POST /search
+Content-Type: application/json
 ### POST /search
 Search for visually similar products.
 
@@ -209,8 +173,8 @@ Generate AI explanations for products.
 - Lambda function receives the image and generates embedding using Nova Multimodal Embedding
 
 ### 2. Vector Search
-- Generated embedding is used to query OpenSearch k-NN index
-- OpenSearch returns top 5 most similar products based on visual similarity
+- Generated embedding is used to query S3 vector store
+- S3 vector store performs in-memory k-NN search for similar products
 - Results are filtered by price, color, and category if specified
 
 ### 3. AI-Powered Filtering
@@ -226,9 +190,9 @@ Generate AI explanations for products.
 ## 📈 Performance & Scaling
 
 ### Vector Search Performance
-- OpenSearch k-NN with HNSW algorithm for fast similarity search
+- In-memory k-NN search with cosine similarity for fast matching
 - 1024-dimensional embeddings for high-quality visual matching
-- Configurable search parameters (ef_search, k)
+- Configurable search parameters (size, similarity threshold)
 
 ### Lambda Scaling
 - Automatic scaling based on request volume
@@ -238,7 +202,7 @@ Generate AI explanations for products.
 ### Cost Optimization
 - Pay-per-use Lambda pricing
 - S3 Intelligent-Tiering for image storage
-- OpenSearch reserved instances for production workloads
+- S3 vector storage eliminates expensive database costs
 
 ## 🔒 Security
 
@@ -295,7 +259,7 @@ python scripts/test_api.py <api-url>
 ### CloudWatch Metrics
 - Lambda invocation count and duration
 - API Gateway request/response metrics
-- OpenSearch search performance
+- S3 vector storage performance
 
 ### Logging
 - Structured JSON logging in Lambda functions
@@ -358,9 +322,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Ensure Nova models are enabled in AWS Console > Bedrock > Model Access
 - Check IAM permissions for Bedrock InvokeModel
 
-**OpenSearch Connection Timeout**
-- Wait for OpenSearch domain to be fully available (can take 15-20 minutes)
-- Check VPC configuration if using VPC endpoints
+**S3 Vector Storage Issues**
+- Check S3 bucket permissions and CORS configuration
+- Verify vector data is properly seeded in S3
+- Check Lambda function logs for S3 access errors
 
 **Lambda Memory Issues**
 - Increase memory allocation for image processing functions
@@ -378,8 +343,8 @@ aws cloudformation describe-stacks --stack-name ai-visual-shopping
 # Check Lambda function logs
 aws logs tail /aws/lambda/ai-shopping-image-search-dev --follow
 
-# Test OpenSearch connectivity
-curl -X GET "https://your-domain.us-east-1.es.amazonaws.com/_cluster/health"
+# Test S3 vector storage
+aws s3 ls s3://ai-shopping-catalog-dev/vectors/
 ```
 
 ## 📞 Support
