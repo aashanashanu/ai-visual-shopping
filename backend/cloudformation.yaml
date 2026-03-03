@@ -15,10 +15,10 @@ Resources:
     Properties:
       BucketName: !Sub 'ai-shopping-catalog-${Environment}'
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
@@ -32,14 +32,7 @@ Resources:
           - Id: DeleteOldVersions
             Status: Enabled
             NoncurrentVersionExpirationInDays: 30
-      BucketPolicy:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: '*'
-            Action: 's3:GetObject'
-            Resource: !Sub 'arn:aws:s3:::${ProductImagesBucket}/*'
+      # Note: demo template tightened public access; remove public read BucketPolicy.
 
   # S3 Bucket for user uploads
   UserUploadsBucket:
@@ -117,7 +110,7 @@ Resources:
       Handler: image_search.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60  # Increased timeout for embedding generation
-      MemorySize: 1024  # Increased memory for better performance
+      MemorySize: 512  # Demo-optimized memory
       Environment:
         Variables:
           PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
@@ -139,11 +132,12 @@ Resources:
       Runtime: python3.11
       Handler: generate_explanation.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 30  # Reduced from 60 to 30 seconds for cost savings
-      MemorySize: 512  # Reduced from 1024 to 512MB for demo usage
+      Timeout: 60  # Increased to allow for Bedrock retries (match demo)
+      MemorySize: 512  # Demo-optimized memory
       Environment:
         Variables:
           REGION: !Ref AWS::Region
+          EXPLANATION_MAX_TOKENS: "6000"
       Code:
         ZipFile: |
           def lambda_handler(event, context):
@@ -202,6 +196,29 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: "'*'"
             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
             method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+
+  # Lambda function for seeding data
+  SeedDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ai-shopping-demo-seed-data-${Environment}'
+      Runtime: python3.11
+      Handler: seed_data.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300  # Extended timeout for data seeding
+      MemorySize: 1024  # Increased memory for seeding
+      Environment:
+        Variables:
+          PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
+          USER_UPLOADS_BUCKET: !Ref UserUploadsBucket
+          REGION: !Ref AWS::Region
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Seed data function placeholder'
+              }
 
   SearchOptionsMethod:
     Type: AWS::ApiGateway::Method

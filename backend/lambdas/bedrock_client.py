@@ -305,23 +305,66 @@ Example: ["product_1", "product_3", "product_5"]
             )
             
             response_body = json.loads(response['body'].read())
-            result_text = response_body['output']['message']['content'][0]['text']
-            
-            # Parse the JSON list of product IDs
+
+            # Extract text content robustly (support multiple Bedrock response shapes)
+            full_text = ''
             try:
-                matching_ids = json.loads(result_text)
-                if not isinstance(matching_ids, list):
-                    raise ValueError("Response is not a list")
-            except (json.JSONDecodeError, ValueError):
-                print(f"Failed to parse AI response as JSON list: {result_text}")
+                content_parts = response_body['output']['message']['content']
+                texts = []
+                for part in content_parts:
+                    if isinstance(part, dict) and 'text' in part:
+                        texts.append(part['text'])
+                    elif isinstance(part, str):
+                        texts.append(part)
+                full_text = "\n".join(texts).strip()
+            except Exception:
+                try:
+                    full_text = response_body.get('output', {}).get('message', {}).get('content', [])[0].get('text', '')
+                except Exception:
+                    full_text = ''
+
+            if not full_text:
+                print("Empty model response when filtering products")
+                return products
+
+            # Try parsing the full text as JSON list first
+            matching_ids = None
+            try:
+                parsed = json.loads(full_text)
+                if isinstance(parsed, list):
+                    matching_ids = parsed
+            except Exception:
+                # Try to extract a JSON array substring from the response
+                import re
+                m = re.search(r'(\[.*\])', full_text, re.DOTALL)
+                if m:
+                    try:
+                        parsed = json.loads(m.group(1))
+                        if isinstance(parsed, list):
+                            matching_ids = parsed
+                    except Exception:
+                        matching_ids = None
+
+            # Fallback: try to detect known product IDs mentioned in the text
+            if not matching_ids:
+                known_ids = [p.get('product_id') for p in products if p.get('product_id')]
+                found = []
+                for pid in known_ids:
+                    if pid and pid in full_text:
+                        found.append(pid)
+                if found:
+                    matching_ids = found
+
+            if not matching_ids:
+                print(f"Failed to parse AI response as JSON list: {full_text}")
                 return products  # Return original products on parse failure
-            
-            # Filter products based on matching IDs
+
+            # Filter products based on matching IDs (preserve original ordering)
             filtered_products = [
                 product for product in products 
                 if product.get('product_id') in matching_ids
             ]
-            
+
             return filtered_products
             
         except Exception as e:
