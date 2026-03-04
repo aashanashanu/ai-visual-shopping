@@ -14,7 +14,7 @@ AI Visual Shopping was inspired by the gap between image-first browsing and sear
 - Frontend: React + TypeScript (see `src/` and `src/components/`) for image upload, product display, and explanation UI.
 - Backend: AWS Lambda functions in `backend/lambdas/` for image processing, vector indexing (`s3_vector_store.py`), and Bedrock/LLM integration (`bedrock_client.py`).
 - Data: A sample product catalog (`sample_catalog.json`) seeded into the vector store via `backend/lambdas/seed_data.py` and `products/` utilities.
-- Infrastructure: CloudFormation templates (`backend/cloudformation.yaml`) and helper scripts in `scripts/` for deployment and demo flows.
+- Infrastructure: CloudFormation templates (`backend/cloudformation.yaml`) and helper scripts in `scripts/` for deployment and operational flows.
 
 ## Challenges we ran into
 

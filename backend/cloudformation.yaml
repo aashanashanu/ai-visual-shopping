@@ -1,15 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AI Visual Shopping - Multimodal Ecommerce with Amazon Nova and S3 Vector Storage'
+Description: 'AI Visual Shopping - Optimized with S3 Vector Storage'
 
 Parameters:
   Environment:
     Type: String
     Default: 'dev'
-    AllowedValues: ['dev', 'prod', 'demo']
+    AllowedValues: ['dev', 'prod']
     Description: Environment name
 
 Resources:
-  # S3 Bucket for product images and vector storage
+  # S3 Bucket for product images and vector storage - Free Tier eligible
   ProductImagesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -22,7 +22,7 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
-            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE']
             AllowedOrigins: ['*']
             MaxAge: 3600
       VersioningConfiguration:
@@ -32,9 +32,8 @@ Resources:
           - Id: DeleteOldVersions
             Status: Enabled
             NoncurrentVersionExpirationInDays: 30
-      # Note: demo template tightened public access; remove public read BucketPolicy.
 
-  # S3 Bucket for user uploads
+  # S3 Bucket for user uploads - Free Tier eligible
   UserUploadsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -47,7 +46,7 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
-            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE']
             AllowedOrigins: ['*']
             MaxAge: 3600
       VersioningConfiguration:
@@ -81,10 +80,7 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
-                Resource:
-                  - arn:aws:bedrock:*::foundation-model/amazon.nova-2-multimodal-embeddings-v1:0
-                  - arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0
-                  - arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0
+                Resource: "*"
         - PolicyName: S3Access
           PolicyDocument:
             Version: '2012-10-17'
@@ -101,7 +97,8 @@ Resources:
                   - !Sub 'arn:aws:s3:::${UserUploadsBucket}'
                   - !Sub 'arn:aws:s3:::${UserUploadsBucket}/*'
 
-  # Lambda function for image search
+
+  # Lambda function for image search - Optimized
   ImageSearchFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -109,8 +106,8 @@ Resources:
       Runtime: python3.11
       Handler: image_search.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 60  # Increased timeout for embedding generation
-      MemorySize: 512  # Demo-optimized memory
+      Timeout: 60  # Increased to allow for Bedrock retries
+      MemorySize: 512
       Environment:
         Variables:
           PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
@@ -124,7 +121,7 @@ Resources:
                   'body': 'Image search function placeholder'
               }
 
-  # Lambda function for generating explanations
+  # Lambda function for generating explanations - Optimized
   GenerateExplanationFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -132,8 +129,8 @@ Resources:
       Runtime: python3.11
       Handler: generate_explanation.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 60  # Increased to allow for Bedrock retries (match demo)
-      MemorySize: 512  # Demo-optimized memory
+      Timeout: 60  # Increased to allow for Bedrock retries
+      MemorySize: 512
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -146,12 +143,35 @@ Resources:
                   'body': 'Generate explanation function placeholder'
               }
 
-  # API Gateway
+  # Lambda function for seeding data - Optimized
+  SeedDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ai-visual-shopping-seed-data-${Environment}'
+      Runtime: python3.11
+      Handler: seed_data.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300  # Extended timeout for data seeding
+      MemorySize: 1024  # Increased memory for seeding
+      Environment:
+        Variables:
+          PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
+          USER_UPLOADS_BUCKET: !Ref UserUploadsBucket
+          REGION: !Ref AWS::Region
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Seed data function placeholder'
+              }
+
+  # API Gateway - Free Tier eligible
   ApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub 'ai-shopping-api-${Environment}'
-      Description: 'API for AI Visual Shopping Application'
+      Description: 'API for AI Visual Shopping'
 
   # API Gateway Resources
   SearchResource:
@@ -180,46 +200,20 @@ Resources:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ImageSearchFunction.Arn}/invocations'
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-        - StatusCode: 400
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-        - StatusCode: 500
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
 
-  # Lambda function for seeding data
-  SeedDataFunction:
-    Type: AWS::Lambda::Function
+  ExplainMethod:
+    Type: AWS::ApiGateway::Method
     Properties:
-      FunctionName: !Sub 'ai-shopping-demo-seed-data-${Environment}'
-      Runtime: python3.11
-      Handler: seed_data.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 300  # Extended timeout for data seeding
-      MemorySize: 1024  # Increased memory for seeding
-      Environment:
-        Variables:
-          PRODUCT_IMAGES_BUCKET: !Ref ProductImagesBucket
-          USER_UPLOADS_BUCKET: !Ref UserUploadsBucket
-          REGION: !Ref AWS::Region
-      Code:
-        ZipFile: |
-          def lambda_handler(event, context):
-              return {
-                  'statusCode': 200,
-                  'body': 'Seed data function placeholder'
-              }
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ExplainResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateExplanationFunction.Arn}/invocations'
 
+  # CORS OPTIONS Methods
   SearchOptionsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -247,34 +241,6 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: true
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Max-Age: true
-
-  ExplainMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGateway
-      ResourceId: !Ref ExplainResource
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateExplanationFunction.Arn}/invocations'
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-        - StatusCode: 400
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-        - StatusCode: 500
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Origin: "'*'"
-            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
 
   ExplainOptionsMethod:
     Type: AWS::ApiGateway::Method
@@ -309,9 +275,11 @@ Resources:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - SearchMethod
-      - SearchOptionsMethod
       - ExplainMethod
+      - SearchOptionsMethod
       - ExplainOptionsMethod
+      - ImageSearchApiPermission
+      - GenerateExplanationApiPermission
     Properties:
       RestApiId: !Ref ApiGateway
 
@@ -322,19 +290,6 @@ Resources:
       RestApiId: !Ref ApiGateway
       DeploymentId: !Ref ApiDeployment
       StageName: !Ref Environment
-      MethodSettings:
-        - ResourcePath: '/*'
-          HttpMethod: '*'
-          ThrottlingRateLimit: 10  # requests per second
-          ThrottlingBurstLimit: 20  # burst requests
-        - ResourcePath: '/search'
-          HttpMethod: 'POST'
-          ThrottlingRateLimit: 5   # lower rate for expensive embedding calls
-          ThrottlingBurstLimit: 10
-        - ResourcePath: '/explain'
-          HttpMethod: 'POST'
-          ThrottlingRateLimit: 5   # lower rate for AI explanation calls
-          ThrottlingBurstLimit: 10
 
   # Lambda API Gateway Permission
   ImageSearchApiPermission:
@@ -371,6 +326,11 @@ Outputs:
     Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
     Export:
       Name: !Sub '${AWS::StackName}-ApiGatewayUrl'
+  LambdaExecutionRole:
+    Description: 'IAM Role ARN for Lambda functions'
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaExecutionRole'
 
   ImageSearchFunctionName:
     Description: 'Image search Lambda function name'
@@ -384,12 +344,6 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-GenerateExplanationFunction'
 
-  LambdaExecutionRole:
-    Description: 'IAM role for Lambda functions'
-    Value: !GetAtt LambdaExecutionRole.Arn
-    Export:
-      Name: !Sub '${AWS::StackName}-LambdaExecutionRole'
-
   CostOptimizationNote:
-    Description: 'Cost optimization achieved by using S3-backed vector storage instead of OpenSearch'
+    Description: 'Cost optimization achieved by removing OpenSearch cluster and using S3-backed vector storage'
     Value: 'Estimated monthly cost: $5-15 (vs $540+ with OpenSearch)'

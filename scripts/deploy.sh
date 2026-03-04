@@ -9,7 +9,6 @@ set -e
 STACK_NAME="ai-visual-shopping"
 REGION="us-east-1"
 ENVIRONMENT="dev"
-USE_DEMO_CONFIG=false
 AUTO_CONFIRM=false
 NON_INTERACTIVE=false
 
@@ -20,12 +19,7 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --demo)
-      ENVIRONMENT="demo"
-      USE_DEMO_CONFIG=true
-      STACK_NAME="ai-visual-shopping-demo"
-      shift
-      ;;
+        # no demo mode - single canonical deployment
         --yes|-y)
             AUTO_CONFIRM=true
             shift
@@ -39,10 +33,9 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "Unknown option: $1"
-      echo "Usage: $0 [--demo] [--region REGION]"
-      echo "  --demo    Deploy in demo mode with cost optimizations"
-      echo "  --region  AWS region (default: us-east-1)"
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--region REGION]"
+            echo "  --region  AWS region (default: us-east-1)"
       exit 1
       ;;
   esac
@@ -99,19 +92,9 @@ check_prerequisites() {
 deploy_infrastructure() {
     log "Deploying CloudFormation infrastructure..."
     
-    # Choose template based on configuration
-    if [ "$USE_DEMO_CONFIG" = true ]; then
-        if [ "$ENVIRONMENT" = "demo" ]; then
-            TEMPLATE_FILE="backend/cloudformation-demo.yaml"
-            log "Using demo-optimized configuration with S3 vector storage"
-        else
-            TEMPLATE_FILE="backend/cloudformation.yaml"
-            log "Using standard production configuration"
-        fi
-    else
-        TEMPLATE_FILE="backend/cloudformation.yaml"
-        log "Using standard production configuration"
-    fi
+    # Use the single CloudFormation template
+    TEMPLATE_FILE="backend/cloudformation.yaml"
+    log "Using CloudFormation template: $TEMPLATE_FILE"
     
     # Check if template file exists
     if [ ! -f "$TEMPLATE_FILE" ]; then

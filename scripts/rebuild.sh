@@ -12,25 +12,21 @@ SKIP_CONFIRMATION=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --demo)
-      ENVIRONMENT="demo"
-      shift
-      ;;
-    --skip-confirm)
-      SKIP_CONFIRMATION=true
-      shift
-      ;;
-    --region)
-      REGION="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option $1"
-      echo "Usage: $0 [--demo] [--skip-confirm] [--region REGION]"
-      exit 1
-      ;;
-  esac
+    case $1 in
+        --skip-confirm)
+            SKIP_CONFIRMATION=true
+            shift
+            ;;
+        --region)
+            REGION="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option $1"
+            echo "Usage: $0 [--skip-confirm] [--region REGION]"
+            exit 1
+            ;;
+    esac
 done
 
 # Colors for output
@@ -112,9 +108,6 @@ cleanup_existing() {
     
     # Build cleanup command
     CLEANUP_CMD="./scripts/cleanup.sh"
-    if [ "$ENVIRONMENT" = "demo" ]; then
-        CLEANUP_CMD="$CLEANUP_CMD --demo"
-    fi
     if [ "$SKIP_CONFIRMATION" = true ]; then
         CLEANUP_CMD="$CLEANUP_CMD --force"
     fi
@@ -138,9 +131,6 @@ deploy_new() {
     
     # Build deploy command
     DEPLOY_CMD="./scripts/deploy.sh"
-    if [ "$ENVIRONMENT" = "demo" ]; then
-        DEPLOY_CMD="$DEPLOY_CMD --demo"
-    fi
     if [ "$REGION" != "us-east-1" ]; then
         DEPLOY_CMD="$DEPLOY_CMD --region $REGION"
     fi
@@ -163,11 +153,7 @@ verify_rebuild() {
     log "Step 3/3: Verifying rebuild..."
     
     # Get API Gateway URL from deployment
-    if [ "$ENVIRONMENT" = "demo" ]; then
-        STACK_NAME="ai-visual-shopping-demo"
-    else
-        STACK_NAME="ai-visual-shopping"
-    fi
+    STACK_NAME="ai-visual-shopping"
     
     API_URL=$(aws cloudformation describe-stacks \
         --stack-name $STACK_NAME \

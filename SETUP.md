@@ -51,7 +51,7 @@ ai-visual-shopping/
 │   │   ├── seed_data.py         # Data seeding
 │   │   ├── bedrock_client.py    # AWS Bedrock integration
 │   │   └── s3_vector_store.py   # Vector store implementation
-│   └── cloudformation-demo.yaml # Infrastructure template
+│   └── cloudformation.yaml # Infrastructure template
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/

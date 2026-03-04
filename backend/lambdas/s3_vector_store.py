@@ -8,7 +8,7 @@ from datetime import datetime
 class S3VectorStore:
     """
     S3-backed vector storage for product embeddings
-    Ultra-low cost alternative to OpenSearch for demo purposes
+    Ultra-low cost alternative to OpenSearch for cost-optimized deployments
     """
     
     def __init__(self, bucket_name: str, region: str = "us-east-1"):

@@ -13,26 +13,21 @@ FORCE_DELETE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --demo)
-      ENVIRONMENT="demo"
-      STACK_NAME="ai-visual-shopping-demo"
-      shift
-      ;;
-    --force)
-      FORCE_DELETE=true
-      shift
-      ;;
-    --region)
-      REGION="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option $1"
-      echo "Usage: $0 [--demo] [--force] [--region REGION]"
-      exit 1
-      ;;
-  esac
+    case $1 in
+        --force)
+            FORCE_DELETE=true
+            shift
+            ;;
+        --region)
+            REGION="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option $1"
+            echo "Usage: $0 [--force] [--region REGION]"
+            exit 1
+            ;;
+    esac
 done
 
 # Colors for output

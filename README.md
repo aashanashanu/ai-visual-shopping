@@ -53,9 +53,9 @@ This project uses **S3-backed vector storage** instead of traditional OpenSearch
 
 ### Deployment
 
-#### Demo Deployment (Cost-Optimized)
+#### Deployment (Cost-Optimized)
 ```bash
-./scripts/deploy.sh --demo
+./scripts/deploy.sh
 ```
 
 #### Production Deployment
@@ -69,8 +69,7 @@ This project uses **S3-backed vector storage** instead of traditional OpenSearch
 ```
 ai-visual-shopping/
 ├── backend/
-│   ├── cloudformation.yaml          # Production infrastructure
-│   ├── cloudformation-demo.yaml     # Demo infrastructure
+│   ├── cloudformation.yaml          # Infrastructure template
 │   └── lambdas/                      # Lambda functions
 │       ├── seed_data.py             # Data seeding
 │       ├── image_search.py          # Visual search
@@ -91,8 +90,8 @@ ai-visual-shopping/
 
 | Variable | Description | Example |
 |-----------|-------------|---------|
-| `PRODUCT_IMAGES_BUCKET` | S3 bucket for product images | `ai-shopping-catalog-demo` |
-| `USER_UPLOADS_BUCKET` | S3 bucket for user uploads | `ai-shopping-uploads-demo` |
+| `PRODUCT_IMAGES_BUCKET` | S3 bucket for product images | `ai-shopping-catalog` |
+| `USER_UPLOADS_BUCKET` | S3 bucket for user uploads | `ai-shopping-uploads` |
 | `REGION` | AWS region | `us-east-1` |
 
 ### Nova Models
@@ -242,8 +241,8 @@ chmod +x scripts/rebuild.sh
 # Complete rebuild with confirmation
 ./scripts/rebuild.sh
 
-# Rebuild demo environment
-./scripts/rebuild.sh --demo
+# Rebuild environment
+./scripts/rebuild.sh
 
 # Skip confirmation (automated rebuild)
 ./scripts/rebuild.sh --skip-confirm

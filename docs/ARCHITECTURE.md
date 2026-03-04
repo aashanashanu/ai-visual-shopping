@@ -175,7 +175,7 @@ User Uploads Image
 ## Key Design Decisions
 
 ### 1. S3-Backed Vector Store (vs OpenSearch)
-**Rationale:** Cost optimization for demo
+**Rationale:** Cost optimization
 - **Savings:** ~97% cost reduction (~$540/month → ~$15/month)
 - **Trade-off:** Slightly slower search (acceptable for demo)
 - **Implementation:** JSON files stored in S3 with in-memory cache
@@ -210,8 +210,8 @@ User Uploads Image
 
 ## Cost Optimization Features
 
-| Component | Demo Config | Production | Savings |
-|-----------|-------------|------------|---------|
+| Component | Optimized Config | Production | Savings |
+|-----------|------------------|------------|---------|
 | Lambda Memory | 512MB | 1024MB | 50% |
 | Vector Storage | S3 | OpenSearch | 95% |
 | Nova Model | Lite | Pro | ~30% |
