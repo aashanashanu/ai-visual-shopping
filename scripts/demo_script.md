@@ -5,16 +5,19 @@ Duration: 3:00 (approx.)
 Goal: Quickly demonstrate uploading an image, running an image-search, and showing AI explanations and system behavior.
 
 0:00 — 0:20 — Intro (Vocal)
-- Vocal: "Hi — I'm [Your Name]. In 3 minutes I'll show AI Visual Shopping: image-based product search with AI explanations and a cost-optimized S3-backed vector store."
+- Vocal: "I'll show AI Visual Shopping: image-based product search with AI explanations and a cost-optimized S3-backed vector store."
 - Action: Stand with the browser and terminal visible.
 
-0:20 — 0:40 — Architecture snapshot (Vocal + Action)
-- Vocal: "Quick overview: the React frontend calls an API Gateway, which invokes Lambda functions for image search and explanation. Embeddings and product data live in S3; AI models run via Bedrock (Nova models)."
-- Action: Show [docs/ARCHITECTURE.md] on-screen and point to the frontend → API Gateway → Lambdas → S3 → Bedrock flow.
+0:20 — 1:00 — Open the app and explain UI (Vocal + Action)
+- Action: Open the deployed frontend URL (or local frontend). Walk through the UI flow live:
+  - Show the Upload panel (how to drag & drop or click to select).
+  - Show the Search Preferences panel (query, preferences, advanced filters).
+  - Show the Search button and the disabled state when no image is uploaded.
+- Vocal: "This is the user flow: upload an image, optionally enter preferences, then click Search. Results appear below with per-product AI explanations. Backend limits results to 5 and explanation tokens are configurable via the `EXPLANATION_MAX_TOKENS` env var."
 
-0:40 — 1:10 — Open the app and explain UI (Vocal + Action)
-- Action: Open the deployed frontend URL (or local frontend). Show the Upload panel and Search Preferences.
-- Vocal: "I'll upload a sample product image and search for 'red dress'. The backend limits results to 5 and explanation tokens are configurable via the `EXPLANATION_MAX_TOKENS` env var."
+1:00 — 1:20 — Architecture snapshot (Vocal + Action)
+- Vocal: "Quick overview: the React frontend calls an API Gateway, which invokes Lambda functions for image search and explanation. Embeddings and product data live in S3; AI models run via Bedrock (Nova models)."
+- Action: Briefly show [docs/ARCHITECTURE.md] on-screen and point to the frontend → API Gateway → Lambdas → S3 → Bedrock flow.
 
 1:10 — 1:40 — Upload image & run search (Action + Short Vocal)
 - Action: Click 'Upload Image', select `products/dress_001.png` (or drag & drop). Click 'Search'.
