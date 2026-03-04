@@ -63,17 +63,6 @@ This project uses **S3-backed vector storage** instead of traditional OpenSearch
 ./scripts/deploy.sh
 ```
 
-### Test the Application
-
-1. **Deploy the infrastructure** (see above)
-2. **Test the API endpoints**:
-   ```bash
-   ./scripts/test_api.py
-   ```
-3. **Deploy the frontend** (optional):
-   ```bash
-   cd frontend && npm run build && aws s3 sync build/ s3://your-bucket-name
-   ```
 
 ## 📁 Project Structure
 
@@ -273,14 +262,6 @@ cd frontend
 npm test
 ```
 
-### Integration Tests
-```bash
-# Test API endpoints
-python scripts/test_api.py <api-url>
-
-# Load testing
- artillery run load-test-config.json
-```
 
 ## 📝 Monitoring & Logging
 
@@ -303,32 +284,6 @@ python scripts/test_api.py <api-url>
 4. Configure custom domain for API Gateway
 5. Set up CloudFront for frontend hosting
 
-### CI/CD Pipeline
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Deploy to AWS
-        run: ./scripts/deploy.sh
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
-
-## 🎮 Demo Script
-
-See `scripts/demo.md` for a complete demo walkthrough:
-1. Upload red dress image
-2. Search for "similar in blue under $80"
-3. Review AI-generated explanations
-4. Test various preference combinations
 
 ## 🤝 Contributing
 
