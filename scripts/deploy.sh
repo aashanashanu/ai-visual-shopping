@@ -270,7 +270,7 @@ deploy_lambda_code() {
     # Deploy Image Search Lambda
     if [ -n "$IMAGE_SEARCH_FUNCTION" ]; then
         deploy_single_lambda "$IMAGE_SEARCH_FUNCTION" \
-            "image_search.py bedrock_client.py s3_vector_store.py" \
+            "image_search.py bedrock_client.py s3_vector_store.py image_utils.py" \
             "image_search.zip"
     fi
     
@@ -284,7 +284,7 @@ deploy_lambda_code() {
     # Deploy Seed Data Lambda
     local seed_function_name="${STACK_NAME}-seed-data-${ENVIRONMENT}"
     deploy_single_lambda "$seed_function_name" \
-        "seed_data.py bedrock_client.py s3_vector_store.py" \
+        "seed_data.py bedrock_client.py s3_vector_store.py image_utils.py" \
         "seed_data.zip"
     
     log "Lambda code deployment completed"

@@ -10,6 +10,17 @@ import time
 
 from bedrock_client import BedrockClient
 from s3_vector_store import S3VectorStore
+try:
+    from image_utils import preprocess_image_bytes, is_blurry
+except Exception:
+    # If image_utils (or its dependencies like Pillow) are missing in the
+    # deployment package, provide safe fallbacks so the seeder can still run
+    # (it will skip image preprocessing and blur checks).
+    def preprocess_image_bytes(image_bytes: bytes, max_side: int = 1024, jpeg_quality: int = 85) -> bytes:
+        return image_bytes
+
+    def is_blurry(image_bytes: bytes, threshold: float = 100.0) -> bool:
+        return False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -217,6 +228,24 @@ class DataSeeder:
                     try:
                         response = self.s3_client.get_object(Bucket=bucket, Key=key)
                         image_bytes = response['Body'].read()
+                        # Preprocess image to ensure consistent orientation/size
+                        try:
+                            max_side = int(os.environ.get('IMAGE_MAX_SIDE', '1024'))
+                        except Exception:
+                            max_side = 1024
+                        image_bytes = preprocess_image_bytes(image_bytes, max_side=max_side)
+                        # Skip overly blurry images during seeding (configurable)
+                        try:
+                            # Use a reasonable default blur threshold; previous value was a typo
+                            seed_threshold = float(os.environ.get('SEED_BLUR_THRESHOLD', '60.0'))
+                        except Exception:
+                            seed_threshold = 60.0
+                        try:
+                            if is_blurry(image_bytes, threshold=seed_threshold):
+                                logger.warning(f"Skipping blurry image for product {product_id}")
+                                continue
+                        except Exception:
+                            pass
                     except Exception as e:
                         logger.warning(f"Could not download image from S3 for {product_id}: {str(e)}")
                         continue
@@ -233,6 +262,23 @@ class DataSeeder:
                     try:
                         response = self.s3_client.get_object(Bucket=bucket, Key=key)
                         image_bytes = response['Body'].read()
+                        # Preprocess image to ensure consistent orientation/size
+                        try:
+                            max_side = int(os.environ.get('IMAGE_MAX_SIDE', '1024'))
+                        except Exception:
+                            max_side = 1024
+                        image_bytes = preprocess_image_bytes(image_bytes, max_side=max_side)
+                        # Skip overly blurry images during seeding (configurable)
+                        try:
+                            seed_threshold = float(os.environ.get('SEED_BLUR_THRESHOLD', '60.0'))
+                        except Exception:
+                            seed_threshold = 60.0
+                        try:
+                            if is_blurry(image_bytes, threshold=seed_threshold):
+                                logger.warning(f"Skipping blurry image for product {product_id}")
+                                continue
+                        except Exception:
+                            pass
                     except Exception as e:
                         logger.warning(f"Could not download image from S3 for {product_id}: {str(e)}")
                         continue
@@ -419,7 +465,7 @@ def lambda_handler(event, context):
         execution_time = time.time() - start_time
         
         if success:
-            logger.info(".2f")
+            logger.info(f"Execution time: {execution_time:.2f}s")
             return {
                 'statusCode': 200,
                 'body': json.dumps({
