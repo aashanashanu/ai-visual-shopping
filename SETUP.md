@@ -118,7 +118,7 @@ python -m pytest
 
 - **Documentation**: See `docs/` folder
 - **Architecture**: `docs/ARCHITECTURE.md`
-- **API Reference**: `docs/API.md`
+- **API Reference**: API endpoints are available after deployment (see the `ApiGatewayUrl` output from the deployment script).
 
 ---
 
